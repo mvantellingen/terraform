@@ -237,8 +237,8 @@ func discoverTypesInPath(path, typeID, typeName string) ([]plugin, error) {
 
 func discoverProviders() ([]plugin, error) {
 	path := "./builtin/providers"
-	typeName := "Provider"
 	typeID := "terraform.ResourceProvider"
+	typeName := "Provider"
 	return discoverTypesInPath(path, typeID, typeName)
 }
 
