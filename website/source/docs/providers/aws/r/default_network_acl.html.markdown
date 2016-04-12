@@ -158,6 +158,16 @@ instruct Terraform to remove all rules of that type in the initial `apply` phase
 **This action is irreversible; we cannot tell in advance what rules will be removed**. 
 Use these configuration options with caution. 
 
+
+### Removing `aws_default_network_acl` from your configuration
+
+Each AWS VPC comes with a Default Network ACL that cannot be deleted. The `aws_default_network_acl` 
+allows you to manage this Network ACL, but Terraform cannot destroy it. Removing
+this resource from your configuration will remove it from your statefile and
+management, **but will not destroy the Network ACL.** All Subnets assocations
+and ingress or egress rules will be left as they are at the time of removal. You
+can resume managing them via the AWS Console.
+
 ## Attributes Reference
 
 The following attributes are exported:
