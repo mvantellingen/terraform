@@ -192,23 +192,6 @@ func resourceAwsDefaultNetworkAclUpdate(d *schema.ResourceData, meta interface{}
 		}
 	}
 
-	if d.HasChange("subnet_id") {
-		//associate new subnet with the acl.
-		_, n := d.GetChange("subnet_id")
-		newSubnet := n.(string)
-		association, err := findNetworkAclAssociation(newSubnet, conn)
-		if err != nil {
-			return fmt.Errorf("Failed to update Default Netowrk ACL %s with Subnet %s: %s", d.Id(), newSubnet, err)
-		}
-		_, err = conn.ReplaceNetworkAclAssociation(&ec2.ReplaceNetworkAclAssociationInput{
-			AssociationId: association.NetworkAclAssociationId,
-			NetworkAclId:  aws.String(d.Id()),
-		})
-		if err != nil {
-			return err
-		}
-	}
-
 	if d.HasChange("subnet_ids") {
 		o, n := d.GetChange("subnet_ids")
 		if o == nil {
