@@ -29,8 +29,10 @@ func resourceAwsDefaultNetworkAcl() *schema.Resource {
 			},
 			"subnet_id": &schema.Schema{
 				Type:       schema.TypeString,
-				Computed:   true,
-				Deprecated: "Attribute subnet_id is deprecated on aws_default_network_acl resources. Use subnet_ids instead",
+				Optional:   true,
+				ForceNew:   true,
+				Computed:   false,
+				Deprecated: "Attribute subnet_id is deprecated on default_network_acl resources. Use subnet_ids instead",
 			},
 			// We want explicit managment of Subnets here, so we do not allow them to be
 			// computed. Instead, an empty config will enforce just that; removal of the
@@ -187,6 +189,23 @@ func resourceAwsDefaultNetworkAclUpdate(d *schema.ResourceData, meta interface{}
 
 	if d.HasChange("egress") {
 		err := updateNetworkAclEntries(d, "egress", conn)
+		if err != nil {
+			return err
+		}
+	}
+
+	if d.HasChange("subnet_id") {
+		//associate new subnet with the acl.
+		_, n := d.GetChange("subnet_id")
+		newSubnet := n.(string)
+		association, err := findNetworkAclAssociation(newSubnet, conn)
+		if err != nil {
+			return fmt.Errorf("Failed to update Default Netowrk ACL %s with Subnet %s: %s", d.Id(), newSubnet, err)
+		}
+		_, err = conn.ReplaceNetworkAclAssociation(&ec2.ReplaceNetworkAclAssociationInput{
+			AssociationId: association.NetworkAclAssociationId,
+			NetworkAclId:  aws.String(d.Id()),
+		})
 		if err != nil {
 			return err
 		}
