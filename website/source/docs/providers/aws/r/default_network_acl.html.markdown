@@ -145,7 +145,7 @@ ACL that cannot be destroyed, and is created with a known set of default rules.
 
 Because of this adoption, the initial plan/apply phase for this resource will
 not accurately know what rules are pre-existing in the Default Network ACL. If
-you wish to deny all traffic in the Default Network ACL and choose omit the
+you wish to deny all traffic in the Default Network ACL and choose to omit the
 `ingress` and `egress` attributes, then the first plan/apply cycle will **not**
 remove any pre-existing rules. The first cycle will "adopt" the resource and
 read it's state. Future plans will then show a diff requesting to remove any
