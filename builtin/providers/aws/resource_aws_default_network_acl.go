@@ -170,57 +170,8 @@ func resourceAwsDefaultNetworkAclCreate(d *schema.ResourceData, meta interface{}
 		}
 	}
 
+	// Re-use the exiting Network ACL Resources READ method
 	return resourceAwsNetworkAclRead(d, meta)
-}
-
-func revokeRulesForType(netaclId, rType string, meta interface{}) error {
-	conn := meta.(*AWSClient).ec2conn
-
-	resp, err := conn.DescribeNetworkAcls(&ec2.DescribeNetworkAclsInput{
-		NetworkAclIds: []*string{aws.String(netaclId)},
-	})
-
-	if err != nil {
-		log.Printf("[DEBUG] Error looking up Network ACL: %s", err)
-		return err
-	}
-
-	if resp == nil {
-		return fmt.Errorf("[ERR] Error looking up Default Network ACL Entries: No results")
-	}
-
-	networkAcl := resp.NetworkAcls[0]
-	for _, e := range networkAcl.Entries {
-		// Skip the default rules added by AWS. They can be neither
-		// configured or deleted by users.
-		if *e.RuleNumber == 32767 {
-			continue
-		}
-
-		// networkAcl.Entries contains a list of ACL Entries, with an Egress boolean
-		// to indicate if they are ingress or egress. Match on that bool to make
-		// sure we're removing the right kind of rule, instead of just all rules
-		rt := "ingress"
-		if *e.Egress == true {
-			rt = "egress"
-		}
-
-		if rType != rt {
-			continue
-		}
-
-		log.Printf("[DEBUG] Destroying Network ACL Entry number (%d) for type (%s)", int(*e.RuleNumber), rt)
-		_, err := conn.DeleteNetworkAclEntry(&ec2.DeleteNetworkAclEntryInput{
-			NetworkAclId: aws.String(netaclId),
-			RuleNumber:   e.RuleNumber,
-			Egress:       e.Egress,
-		})
-		if err != nil {
-			return fmt.Errorf("Error deleting entry (%s): %s", e, err)
-		}
-	}
-
-	return nil
 }
 
 func resourceAwsDefaultNetworkAclUpdate(d *schema.ResourceData, meta interface{}) error {
@@ -319,5 +270,57 @@ func resourceAwsDefaultNetworkAclUpdate(d *schema.ResourceData, meta interface{}
 func resourceAwsDefaultNetworkAclDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[WARN] Cannot destroy Default Network ACL. Terraform will remove this resource from the state file, however resources may remain.")
 	d.SetId("")
+	return nil
+}
+
+// revokeRulesForType will query the Network ACL for it's entries, and revoke
+// any rule of the matching type.
+func revokeRulesForType(netaclId, rType string, meta interface{}) error {
+	conn := meta.(*AWSClient).ec2conn
+
+	resp, err := conn.DescribeNetworkAcls(&ec2.DescribeNetworkAclsInput{
+		NetworkAclIds: []*string{aws.String(netaclId)},
+	})
+
+	if err != nil {
+		log.Printf("[DEBUG] Error looking up Network ACL: %s", err)
+		return err
+	}
+
+	if resp == nil {
+		return fmt.Errorf("[ERR] Error looking up Default Network ACL Entries: No results")
+	}
+
+	networkAcl := resp.NetworkAcls[0]
+	for _, e := range networkAcl.Entries {
+		// Skip the default rules added by AWS. They can be neither
+		// configured or deleted by users.
+		if *e.RuleNumber == 32767 {
+			continue
+		}
+
+		// networkAcl.Entries contains a list of ACL Entries, with an Egress boolean
+		// to indicate if they are ingress or egress. Match on that bool to make
+		// sure we're removing the right kind of rule, instead of just all rules
+		rt := "ingress"
+		if *e.Egress == true {
+			rt = "egress"
+		}
+
+		if rType != rt {
+			continue
+		}
+
+		log.Printf("[DEBUG] Destroying Network ACL Entry number (%d) for type (%s)", int(*e.RuleNumber), rt)
+		_, err := conn.DeleteNetworkAclEntry(&ec2.DeleteNetworkAclEntryInput{
+			NetworkAclId: aws.String(netaclId),
+			RuleNumber:   e.RuleNumber,
+			Egress:       e.Egress,
+		})
+		if err != nil {
+			return fmt.Errorf("Error deleting entry (%s): %s", e, err)
+		}
+	}
+
 	return nil
 }
