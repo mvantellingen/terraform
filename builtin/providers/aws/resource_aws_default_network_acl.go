@@ -29,7 +29,7 @@ func resourceAwsDefaultNetworkAcl() *schema.Resource {
 			},
 			"subnet_id": &schema.Schema{
 				Type:       schema.TypeString,
-				Computed:   false,
+				Computed:   true,
 				Deprecated: "Attribute subnet_id is deprecated on aws_default_network_acl resources. Use subnet_ids instead",
 			},
 			// We want explicit managment of Subnets here, so we do not allow them to be
